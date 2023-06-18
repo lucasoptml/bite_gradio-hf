@@ -2,7 +2,7 @@
 #custom 
 /checkpoint
 debugging
-/datasets
+#/datasets
 src/smal_pytorch/smal_data/optional
 /datasets/*
 !/datasets/test_image_crops
@@ -36,7 +36,7 @@ src/graph_networks/losses_for_vertex_wise_predictions/debugging_results
 #data/stanext_related_data/ground_contact_annotations/stage3/gc_annots_overview_stage3complete.pkl
 #data/smal_data_remeshed/uniform_surface_sampling
 #data/texture_related/
-/data/*
+#/data/*
 src/test_time_optimization/texture/debug
 src/test_time_optimization/texture/debug_v2
 
