@@ -1,13 +1,4 @@
 
-# aenv_new_icon_2
-
-# was used for ttoptv6_sketchfab_v16: python src/test_time_optimization/ttopt_fromref_v6_sketchfab.py --workers 12 --save-images True --config refinement_cfg_visualization_withgc_withvertexwisegc_isflat.yaml --model-file-complete=cvpr23_dm39dnnv3barcv2b_refwithgcpervertisflat0morestanding0/checkpoint.pth.tar --sketchfab 1
-
-# for stanext images:
-#   python scripts/gradio.py --workers 12 --config refinement_cfg_test_withvertexwisegc_csaddnonflat.yaml --model-file-complete=cvpr23_dm39dnnv3barcv2b_refwithgcpervertisflat0morestanding0/checkpoint.pth.tar -s ttopt_vtest1
-# for all images from the folder datasets/test_image_crops:
-#   python scripts/gradio.py --workers 12 --config refinement_cfg_test_withvertexwisegc_csaddnonflat_crops.yaml --model-file-complete=cvpr23_dm39dnnv3barcv2b_refwithgcpervertisflat0morestanding0/checkpoint.pth.tar -s ttopt_vtest2
-
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
