@@ -612,7 +612,7 @@ description = '''
 #### Description
 This is a demo for BITE (*B*eyond Priors for *I*mproved *T*hree-{D} Dog Pose *E*stimation). 
 You can either submit a cropped image or choose the option to run a pretrained Faster R-CNN in order to obtain a bounding box. 
-Furthermore, you have the option to skip test-time optimization, which will lead to faster calculation at the cost of less accurate results. 
+Furthermore, you have the possibility to skip test-time optimization, which will lead to faster calculation at the cost of less accurate results. 
 Please have a look at the examples below.
 <details>
 
@@ -637,7 +637,7 @@ Please have a look at the examples below.
     * https://thumbs.dreamstime.com/b/hund-und-seine-neue-hundeh%C3%BCtte-36757551.jpg
     * https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnx2sHnnLU3zy1XnJB7BvGUR9spmAh5bxTUg&usqp=CAU
     * https://www.westend61.de/en/imageView/CAVF56467/portrait-of-dog-lying-on-floor-at-home
-
+    * https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFGxMcePtorQnSJncl6WhQfbR6VRccMq9gqA&usqp=CAU
 </details>
 '''
 
