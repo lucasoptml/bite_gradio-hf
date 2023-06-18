@@ -247,7 +247,7 @@ if not os.path.exists(save_imgs_path):
 
 
 
-def run_bite_inference(input_image, bbox=None):
+def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
 
     with open(loss_weight_path, 'r') as j: 
         losses = json.loads(j.read())
@@ -386,8 +386,9 @@ def run_bite_inference(input_image, bbox=None):
         target_gc_class = sm(res['vertexwise_ground_contact'][ind_img, :, :])[None, :, 1]       # values between 0 and 1
         target_gc_class_remeshed = torch.einsum('ij,aij->ai', remeshing_relevant_barys, target_gc_class[:, remeshing_relevant_faces].to(device=device, dtype=torch.float32))
         target_gc_class_remeshed_prep = torch.round(target_gc_class_remeshed).to(torch.long)
-        vert_colors = np.repeat(255*target_gc_class.detach().cpu().numpy()[0, :, None], 3, 1)
-        vert_colors[:, 2] = 255
+        # vert_colors = np.repeat(255*target_gc_class.detach().cpu().numpy()[0, :, None], 3, 1)
+        # vert_colors[:, 2] = 255
+        vert_colors = np.ones_like(np.repeat(target_gc_class.detach().cpu().numpy()[0, :, None], 3, 1)) * 255
         faces_prep = smal.faces.unsqueeze(0).expand((batch_size, -1, -1))
         # prepare target silhouette and keypoints, from stacked hourglass predictions
         target_hg_silh = res['hg_silh_prep'][ind_img, :, :].detach()
@@ -405,152 +406,165 @@ def run_bite_inference(input_image, bbox=None):
         ignore_pose_optimization = False
 
 
-    ##########################################################################################################
-    # start optimizing for this image
-    n_iter = 301    # how many iterations are desired? (+1)
-    loop = tqdm(range(n_iter))
-    per_loop_lst = []
-    list_error_procrustes = []
-    for i in loop:
-        # for the first 150 iterations steps we don't allow vertex shifts
-        if i == 0:          
-            current_i = 0
-            if ignore_pose_optimization:
-                current_optimizer = nopose_optimizer
-            else:
-                current_optimizer = optimizer
-            current_scheduler = scheduler
-            current_weight_name = 'weight' 
-        # after 150 iteration steps we start with vertex shifts    
-        elif i == 150:      
-            current_i = 0
-            if ignore_pose_optimization:
-                current_optimizer = nopose_optimizer_vshift
-            else:
-                current_optimizer = optimizer_vshift
-            current_scheduler = scheduler_vshift
-            current_weight_name = 'weight_vshift'    
-            # set up arap loss
-            if losses["arap"]['weight_vshift'] > 0.0:
-                with torch.no_grad():
-                    torch_mesh_comparison = Meshes(smal_verts.detach(), faces_prep.detach())
-                arap_loss = Arap_Loss(meshes=torch_mesh_comparison, device=device)  
-            #  is there a laplacian loss similar as in coarse-to-fine?
-            if losses["lapctf"]['weight_vshift'] > 0.0:
-                torch_verts_comparison = smal_verts.detach().clone()
-                smal_model_type_downsampling = '39dogs_norm'
-                smal_downsampling_npz_name = 'mesh_downsampling_' + os.path.basename(SMAL_MODEL_CONFIG[smal_model_type_downsampling]['smal_model_path']).replace('.pkl', '_template.npz')
-                smal_downsampling_npz_path = os.path.join(root_smal_downsampling, smal_downsampling_npz_name)  
-                data = np.load(smal_downsampling_npz_path, encoding='latin1', allow_pickle=True)
-                adjmat = data['A'][0]
-                laplacian_ctf = LaplacianCTF(adjmat, device=device)
-        else:
-            pass
-
-
-        current_optimizer.zero_grad()
-
+    if not apply_ttopt:
         # get 3d smal model
         optimed_pose_with_glob = get_optimed_pose_with_glob(optimed_orient_6d, optimed_pose_6d)
         optimed_trans = torch.cat((optimed_trans_xy, optimed_trans_z), dim=1)
         smal_verts, keyp_3d, _ = smal(beta=optimed_betas, betas_limbs=optimed_betas_limbs, pose=optimed_pose_with_glob, vert_off_compact=optimed_vert_off_compact, trans=optimed_trans, keyp_conf='olive', get_skin=True)
 
-        # render silhouette and keypoints
-        pred_silh_images, pred_keyp_raw = silh_renderer(vertices=smal_verts, points=keyp_3d, faces=faces_prep, focal_lengths=optimed_camera_flength)
-        pred_keyp = pred_keyp_raw[:, :24, :]
+        # save mesh
+        my_mesh_tri = trimesh.Trimesh(vertices=smal_verts[0, ...].detach().cpu().numpy(), faces=faces_prep[0, ...].detach().cpu().numpy(), process=False,  maintain_order=True)
+        my_mesh_tri.visual.vertex_colors = vert_colors
+        my_mesh_tri.export(root_out_path +  name + '_res_e000' + '.obj')
 
-        # save silhouette reprojection visualization
-        if i==0:
-            img_silh = Image.fromarray(np.uint8(255*pred_silh_images[0, 0, :, :].detach().cpu().numpy())).convert('RGB')
-            img_silh.save(root_out_path_details +  name + '_silh_ainit.png')
-            my_mesh_tri = trimesh.Trimesh(vertices=smal_verts[0, ...].detach().cpu().numpy(), faces=faces_prep[0, ...].detach().cpu().numpy(), process=False,  maintain_order=True)
-            my_mesh_tri.export(root_out_path_details +  name + '_res_ainit.obj')
+    else: 
 
-        # silhouette loss
-        diff_silh = torch.abs(pred_silh_images[0, 0, :, :] - target_hg_silh)
-        losses['silhouette']['value'] = diff_silh.mean()
+        ##########################################################################################################
+        # start optimizing for this image
+        n_iter = 301    # how many iterations are desired? (+1)
+        loop = tqdm(range(n_iter))
+        per_loop_lst = []
+        list_error_procrustes = []
+        for i in loop:
+            # for the first 150 iterations steps we don't allow vertex shifts
+            if i == 0:          
+                current_i = 0
+                if ignore_pose_optimization:
+                    current_optimizer = nopose_optimizer
+                else:
+                    current_optimizer = optimizer
+                current_scheduler = scheduler
+                current_weight_name = 'weight' 
+            # after 150 iteration steps we start with vertex shifts    
+            elif i == 150:      
+                current_i = 0
+                if ignore_pose_optimization:
+                    current_optimizer = nopose_optimizer_vshift
+                else:
+                    current_optimizer = optimizer_vshift
+                current_scheduler = scheduler_vshift
+                current_weight_name = 'weight_vshift'    
+                # set up arap loss
+                if losses["arap"]['weight_vshift'] > 0.0:
+                    with torch.no_grad():
+                        torch_mesh_comparison = Meshes(smal_verts.detach(), faces_prep.detach())
+                    arap_loss = Arap_Loss(meshes=torch_mesh_comparison, device=device)  
+                #  is there a laplacian loss similar as in coarse-to-fine?
+                if losses["lapctf"]['weight_vshift'] > 0.0:
+                    torch_verts_comparison = smal_verts.detach().clone()
+                    smal_model_type_downsampling = '39dogs_norm'
+                    smal_downsampling_npz_name = 'mesh_downsampling_' + os.path.basename(SMAL_MODEL_CONFIG[smal_model_type_downsampling]['smal_model_path']).replace('.pkl', '_template.npz')
+                    smal_downsampling_npz_path = os.path.join(root_smal_downsampling, smal_downsampling_npz_name)  
+                    data = np.load(smal_downsampling_npz_path, encoding='latin1', allow_pickle=True)
+                    adjmat = data['A'][0]
+                    laplacian_ctf = LaplacianCTF(adjmat, device=device)
+            else:
+                pass
 
-        # keypoint_loss
-        output_kp_resh = (pred_keyp[0, :, :]).reshape((-1, 2))    
-        losses['keyp']['value'] = ((((output_kp_resh - target_kp_resh)[weights_resh>0]**2).sum(axis=1).sqrt() * \
-            weights_resh[weights_resh>0])*keyp_w_resh[weights_resh>0]).sum() / \
-            max((weights_resh[weights_resh>0]*keyp_w_resh[weights_resh>0]).sum(), 1e-5)
-        # losses['keyp']['value'] = ((((output_kp_resh - target_kp_resh)[weights_resh>0]**2).sum(axis=1).sqrt()*weights_resh[weights_resh>0])*keyp_w_resh[weights_resh>0]).sum() / max((weights_resh[weights_resh>0]*keyp_w_resh[weights_resh>0]).sum(), 1e-5)
 
-        # pose priors on refined pose
-        losses['pose_legs_side']['value'] = leg_sideway_error(optimed_pose_with_glob)
-        losses['pose_legs_tors']['value'] = leg_torsion_error(optimed_pose_with_glob)
-        losses['pose_tail_side']['value'] = tail_sideway_error(optimed_pose_with_glob)
-        losses['pose_tail_tors']['value'] = tail_torsion_error(optimed_pose_with_glob)
-        losses['pose_spine_side']['value'] = spine_sideway_error(optimed_pose_with_glob)
-        losses['pose_spine_tors']['value'] = spine_torsion_error(optimed_pose_with_glob)
+            current_optimizer.zero_grad()
 
-        # ground contact loss
-        sel_verts = torch.index_select(smal_verts, dim=1, index=remeshing_relevant_faces.reshape((-1))).reshape((batch_size, remeshing_relevant_faces.shape[0], 3, 3))
-        verts_remeshed = torch.einsum('ij,aijk->aik', remeshing_relevant_barys, sel_verts)
+            # get 3d smal model
+            optimed_pose_with_glob = get_optimed_pose_with_glob(optimed_orient_6d, optimed_pose_6d)
+            optimed_trans = torch.cat((optimed_trans_xy, optimed_trans_z), dim=1)
+            smal_verts, keyp_3d, _ = smal(beta=optimed_betas, betas_limbs=optimed_betas_limbs, pose=optimed_pose_with_glob, vert_off_compact=optimed_vert_off_compact, trans=optimed_trans, keyp_conf='olive', get_skin=True)
 
-        # gc_errors_plane, gc_errors_under_plane = calculate_plane_errors_batch(verts_remeshed, target_gc_class_remeshed_prep, target_dict['has_gc'], target_dict['has_gc_is_touching'])
-        gc_errors_plane, gc_errors_under_plane = calculate_plane_errors_batch(verts_remeshed, target_gc_class_remeshed_prep, isflat, istouching)
+            # render silhouette and keypoints
+            pred_silh_images, pred_keyp_raw = silh_renderer(vertices=smal_verts, points=keyp_3d, faces=faces_prep, focal_lengths=optimed_camera_flength)
+            pred_keyp = pred_keyp_raw[:, :24, :]
 
-        losses['gc_plane']['value'] = torch.mean(gc_errors_plane) 
-        losses['gc_belowplane']['value'] = torch.mean(gc_errors_under_plane)
+            # save silhouette reprojection visualization
+            if i==0:
+                img_silh = Image.fromarray(np.uint8(255*pred_silh_images[0, 0, :, :].detach().cpu().numpy())).convert('RGB')
+                img_silh.save(root_out_path_details +  name + '_silh_ainit.png')
+                my_mesh_tri = trimesh.Trimesh(vertices=smal_verts[0, ...].detach().cpu().numpy(), faces=faces_prep[0, ...].detach().cpu().numpy(), process=False,  maintain_order=True)
+                my_mesh_tri.export(root_out_path_details +  name + '_res_ainit.obj')
 
-        # edge length of the predicted mesh
-        if (losses["edge"][current_weight_name] + losses["normal"][ current_weight_name] + losses["laplacian"][ current_weight_name]) > 0:
-            torch_mesh = Meshes(smal_verts, faces_prep.detach())
-            losses["edge"]['value'] = mesh_edge_loss(torch_mesh)
-            # mesh normal consistency
-            losses["normal"]['value'] = mesh_normal_consistency(torch_mesh)
-            # mesh laplacian smoothing
-            losses["laplacian"]['value'] = mesh_laplacian_smoothing(torch_mesh, method="uniform")
+            # silhouette loss
+            diff_silh = torch.abs(pred_silh_images[0, 0, :, :] - target_hg_silh)
+            losses['silhouette']['value'] = diff_silh.mean()
 
-        # arap loss
-        if losses["arap"][current_weight_name] > 0.0:
-            torch_mesh = Meshes(smal_verts, faces_prep.detach())
-            losses["arap"]['value'] =  arap_loss(torch_mesh)
+            # keypoint_loss
+            output_kp_resh = (pred_keyp[0, :, :]).reshape((-1, 2))    
+            losses['keyp']['value'] = ((((output_kp_resh - target_kp_resh)[weights_resh>0]**2).sum(axis=1).sqrt() * \
+                weights_resh[weights_resh>0])*keyp_w_resh[weights_resh>0]).sum() / \
+                max((weights_resh[weights_resh>0]*keyp_w_resh[weights_resh>0]).sum(), 1e-5)
+            # losses['keyp']['value'] = ((((output_kp_resh - target_kp_resh)[weights_resh>0]**2).sum(axis=1).sqrt()*weights_resh[weights_resh>0])*keyp_w_resh[weights_resh>0]).sum() / max((weights_resh[weights_resh>0]*keyp_w_resh[weights_resh>0]).sum(), 1e-5)
 
-        # laplacian loss for comparison (from coarse-to-fine paper)
-        if losses["lapctf"][current_weight_name] > 0.0:
-            verts_refine = smal_verts
-            loss_almost_arap, loss_smooth = laplacian_ctf(verts_refine, torch_verts_comparison)
-            losses["lapctf"]['value'] =  loss_almost_arap
+            # pose priors on refined pose
+            losses['pose_legs_side']['value'] = leg_sideway_error(optimed_pose_with_glob)
+            losses['pose_legs_tors']['value'] = leg_torsion_error(optimed_pose_with_glob)
+            losses['pose_tail_side']['value'] = tail_sideway_error(optimed_pose_with_glob)
+            losses['pose_tail_tors']['value'] = tail_torsion_error(optimed_pose_with_glob)
+            losses['pose_spine_side']['value'] = spine_sideway_error(optimed_pose_with_glob)
+            losses['pose_spine_tors']['value'] = spine_torsion_error(optimed_pose_with_glob)
 
-        # Weighted sum of the losses
-        total_loss = 0.0 
-        for k in ['keyp', 'silhouette', 'pose_legs_side', 'pose_legs_tors', 'pose_tail_side', 'pose_tail_tors', 'pose_spine_tors', 'pose_spine_side', 'gc_plane', 'gc_belowplane', 'edge', 'normal', 'laplacian', 'arap', 'lapctf']:
-            if losses[k][current_weight_name] > 0.0:
-                total_loss += losses[k]['value'] * losses[k][current_weight_name]
+            # ground contact loss
+            sel_verts = torch.index_select(smal_verts, dim=1, index=remeshing_relevant_faces.reshape((-1))).reshape((batch_size, remeshing_relevant_faces.shape[0], 3, 3))
+            verts_remeshed = torch.einsum('ij,aijk->aik', remeshing_relevant_barys, sel_verts)
 
-        # calculate gradient and make optimization step
-        total_loss.backward(retain_graph=True)  #  
-        current_optimizer.step()
-        current_scheduler.step(total_loss)
-        loop.set_description(f"Body Fitting = {total_loss.item():.3f}")
+            # gc_errors_plane, gc_errors_under_plane = calculate_plane_errors_batch(verts_remeshed, target_gc_class_remeshed_prep, target_dict['has_gc'], target_dict['has_gc_is_touching'])
+            gc_errors_plane, gc_errors_under_plane = calculate_plane_errors_batch(verts_remeshed, target_gc_class_remeshed_prep, isflat, istouching)
 
-        # save the result three times (0, 150, 300)
-        if i % 150 == 0:    
-            # save silhouette image
-            img_silh = Image.fromarray(np.uint8(255*pred_silh_images[0, 0, :, :].detach().cpu().numpy())).convert('RGB')
-            img_silh.save(root_out_path_details +  name + '_silh_e' + format(i, '03d') + '.png')
-            # save image overlay
-            visualizations = silh_renderer.get_visualization_nograd(smal_verts, faces_prep, optimed_camera_flength, color=0)
-            pred_tex = visualizations[0, :, :, :].permute((1, 2, 0)).cpu().detach().numpy() / 256
-            # out_path = root_out_path_details +  name + '_tex_pred_e' + format(i, '03d') + '.png'
-            # plt.imsave(out_path, pred_tex)
-            input_image_np = img_inp.copy()
-            im_masked = cv2.addWeighted(input_image_np,0.2,pred_tex,0.8,0)
-            pred_tex_max = np.max(pred_tex, axis=2)
-            im_masked[pred_tex_max<0.01, :] = input_image_np[pred_tex_max<0.01, :]
-            out_path = root_out_path +  name + '_comp_pred_e' + format(i, '03d') + '.png'
-            plt.imsave(out_path, im_masked)
-            # save mesh
-            my_mesh_tri = trimesh.Trimesh(vertices=smal_verts[0, ...].detach().cpu().numpy(), faces=faces_prep[0, ...].detach().cpu().numpy(), process=False,  maintain_order=True)
-            my_mesh_tri.visual.vertex_colors = vert_colors
-            my_mesh_tri.export(root_out_path +  name + '_res_e' + format(i, '03d') + '.obj')
-            # save focal length (together with the mesh this is enough to create an overlay in blender)
-            out_file_flength = root_out_path_details +  name + '_flength_e' + format(i, '03d') # + '.npz'
-            np.save(out_file_flength, optimed_camera_flength.detach().cpu().numpy())
-        current_i += 1
+            losses['gc_plane']['value'] = torch.mean(gc_errors_plane) 
+            losses['gc_belowplane']['value'] = torch.mean(gc_errors_under_plane)
+
+            # edge length of the predicted mesh
+            if (losses["edge"][current_weight_name] + losses["normal"][ current_weight_name] + losses["laplacian"][ current_weight_name]) > 0:
+                torch_mesh = Meshes(smal_verts, faces_prep.detach())
+                losses["edge"]['value'] = mesh_edge_loss(torch_mesh)
+                # mesh normal consistency
+                losses["normal"]['value'] = mesh_normal_consistency(torch_mesh)
+                # mesh laplacian smoothing
+                losses["laplacian"]['value'] = mesh_laplacian_smoothing(torch_mesh, method="uniform")
+
+            # arap loss
+            if losses["arap"][current_weight_name] > 0.0:
+                torch_mesh = Meshes(smal_verts, faces_prep.detach())
+                losses["arap"]['value'] =  arap_loss(torch_mesh)
+
+            # laplacian loss for comparison (from coarse-to-fine paper)
+            if losses["lapctf"][current_weight_name] > 0.0:
+                verts_refine = smal_verts
+                loss_almost_arap, loss_smooth = laplacian_ctf(verts_refine, torch_verts_comparison)
+                losses["lapctf"]['value'] =  loss_almost_arap
+
+            # Weighted sum of the losses
+            total_loss = 0.0 
+            for k in ['keyp', 'silhouette', 'pose_legs_side', 'pose_legs_tors', 'pose_tail_side', 'pose_tail_tors', 'pose_spine_tors', 'pose_spine_side', 'gc_plane', 'gc_belowplane', 'edge', 'normal', 'laplacian', 'arap', 'lapctf']:
+                if losses[k][current_weight_name] > 0.0:
+                    total_loss += losses[k]['value'] * losses[k][current_weight_name]
+
+            # calculate gradient and make optimization step
+            total_loss.backward(retain_graph=True)  #  
+            current_optimizer.step()
+            current_scheduler.step(total_loss)
+            loop.set_description(f"Body Fitting = {total_loss.item():.3f}")
+
+            # save the result three times (0, 150, 300)
+            if i % 150 == 0:    
+                # save silhouette image
+                img_silh = Image.fromarray(np.uint8(255*pred_silh_images[0, 0, :, :].detach().cpu().numpy())).convert('RGB')
+                img_silh.save(root_out_path_details +  name + '_silh_e' + format(i, '03d') + '.png')
+                # save image overlay
+                visualizations = silh_renderer.get_visualization_nograd(smal_verts, faces_prep, optimed_camera_flength, color=0)
+                pred_tex = visualizations[0, :, :, :].permute((1, 2, 0)).cpu().detach().numpy() / 256
+                # out_path = root_out_path_details +  name + '_tex_pred_e' + format(i, '03d') + '.png'
+                # plt.imsave(out_path, pred_tex)
+                input_image_np = img_inp.copy()
+                im_masked = cv2.addWeighted(input_image_np,0.2,pred_tex,0.8,0)
+                pred_tex_max = np.max(pred_tex, axis=2)
+                im_masked[pred_tex_max<0.01, :] = input_image_np[pred_tex_max<0.01, :]
+                out_path = root_out_path +  name + '_comp_pred_e' + format(i, '03d') + '.png'
+                plt.imsave(out_path, im_masked)
+                # save mesh
+                my_mesh_tri = trimesh.Trimesh(vertices=smal_verts[0, ...].detach().cpu().numpy(), faces=faces_prep[0, ...].detach().cpu().numpy(), process=False,  maintain_order=True)
+                my_mesh_tri.visual.vertex_colors = vert_colors
+                my_mesh_tri.export(root_out_path +  name + '_res_e' + format(i, '03d') + '.obj')
+                # save focal length (together with the mesh this is enough to create an overlay in blender)
+                out_file_flength = root_out_path_details +  name + '_flength_e' + format(i, '03d') # + '.npz'
+                np.save(out_file_flength, optimed_camera_flength.detach().cpu().numpy())
+            current_i += 1
 
     # prepare output mesh
     mesh = my_mesh_tri  # all_results[0]['mesh_posed']
@@ -570,7 +584,7 @@ def run_bite_inference(input_image, bbox=None):
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-def run_complete_inference(img_path_or_img, crop_choice):
+def run_complete_inference(img_path_or_img, crop_choice, use_ttopt):
     # depending on crop_choice: run faster r-cnn or take the input image directly
     if crop_choice == "input image is cropped":
         if isinstance(img_path_or_img, str):
@@ -581,8 +595,12 @@ def run_complete_inference(img_path_or_img, crop_choice):
         output_interm_bbox = None
     else:
         output_interm_image, output_interm_bbox = run_bbox_inference(img_path_or_img.copy())
+    if use_ttopt == "enable test-time optimization":
+        apply_ttopt = True
+    else:
+        apply_ttopt = False
     # run barc inference
-    result_gltf = run_bite_inference(img_path_or_img, output_interm_bbox)
+    result_gltf = run_bite_inference(img_path_or_img, output_interm_bbox, apply_ttopt)
     # add white border to image for nicer alignment
     output_interm_image_vis = np.concatenate((255*np.ones_like(output_interm_image), output_interm_image, 255*np.ones_like(output_interm_image)), axis=1)
     return [result_gltf, result_gltf, output_interm_image_vis]
@@ -602,7 +620,8 @@ description = '''
 
 #### Description
 This is a demo for BITE (*B*eyond Priors for *I*mproved *T*hree-{D} Dog Pose *E*stimation). 
-You can either submit a cropped image or choose the option to run a pretrained Faster R-CNN in order to obtain a bounding box.  
+You can either submit a cropped image or choose the option to run a pretrained Faster R-CNN in order to obtain a bounding box. 
+Furthermore, you have the option to skip test-time optimization, which will lead to faster calculation at the cost of less accurate results. 
 Please have a look at the examples below.
 <details>
 
@@ -623,11 +642,9 @@ Please have a look at the examples below.
 #### Image Sources
 * Stanford extra image dataset
 * Images from google search engine
-    * https://www.dogtrainingnation.com/wp-content/uploads/2015/02/keep-dog-training-sessions-short.jpg
+    * https://www.dogtrainingnation.com/wp-content/uploads/2015/02/keep-dog-training-sessions-short.jpghttps://www.ktvb.com/article/news/local/dogs-can-now-be-off-leash-again-in-boises-ann-morrison-park-optimist-youth-sports-complex/277-609691113
     * https://thumbs.dreamstime.com/b/hund-und-seine-neue-hundeh%C3%BCtte-36757551.jpg
-    * https://www.mydearwhippet.com/wp-content/uploads/2021/04/whippet-temperament-2.jpg
-    * https://media.istockphoto.com/photos/ibizan-hound-at-the-shore-in-winter-picture-id1092705644?k=20&m=1092705644&s=612x612&w=0&h=ppwg92s9jI8GWnk22SOR_DWWNP8b2IUmLXSQmVey5Ss=
-
+    * https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnx2sHnnLU3zy1XnJB7BvGUR9spmAh5bxTUg&usqp=CAU
 
 </details>
 '''
@@ -644,16 +661,16 @@ random.shuffle(example_images)
 examples = []
 for img in example_images:
     if os.path.basename(img)[:2] == 'z_':
-        examples.append([img, "use Faster R-CNN to get a bounding box"])
+        examples.append([img, "use Faster R-CNN to get a bounding box", "enable test-time optimization"])
     else:
-        examples.append([img, "input image is cropped"])
+        examples.append([img, "input image is cropped", "enable test-time optimization"])
 
 demo = gr.Interface(
     fn=run_complete_inference,
     description=description,
-    # inputs=gr.Image(type="filepath", label="Input Image"),
     inputs=[gr.Image(label="Input Image"),
         gr.Radio(["input image is cropped", "use Faster R-CNN to get a bounding box"], value="use Faster R-CNN to get a bounding box", label="Crop Choice"),
+        gr.Radio(["enable test-time optimization", "skip test-time optimization"], value="enable test-time optimization", label="Test Time Optimization"),
     ],
     outputs=[
         gr.Model3D(
@@ -665,8 +682,8 @@ demo = gr.Interface(
     examples=examples,
     thumbnail="bite_thumbnail.png",
     allow_flagging="never",
-    cache_examples=True,
+    cache_examples=False,  # True,
     examples_per_page=14,
 )
 
-demo.launch(share=True)
+demo.launch()   # share=True)
