@@ -5,5 +5,5 @@ colorTo: green
 sdk: gradio
 sdk_version: 3.0.2
 app_file: ./scripts/gradio_demo.py
-pinned: false
+pinned: True
 python_version: 3.7.6
