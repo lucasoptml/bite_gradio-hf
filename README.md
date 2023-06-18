@@ -1,12 +1,9 @@
----
-title: Bite Gradio
-emoji: 👀
-colorFrom: blue
-colorTo: pink
+title: BITE
+emoji: 🐩  🐶  🐕
+colorFrom: pink
+colorTo: green
 sdk: gradio
-sdk_version: 3.35.2
-app_file: app.py
+sdk_version: 3.0.2
+app_file: ./scripts/gradio_demo.py
 pinned: false
----
-
-Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
+python_version: 3.7.6
