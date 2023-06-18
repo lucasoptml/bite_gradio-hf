@@ -636,6 +636,7 @@ Please have a look at the examples below.
     * https://www.dogtrainingnation.com/wp-content/uploads/2015/02/keep-dog-training-sessions-short.jpghttps://www.ktvb.com/article/news/local/dogs-can-now-be-off-leash-again-in-boises-ann-morrison-park-optimist-youth-sports-complex/277-609691113
     * https://thumbs.dreamstime.com/b/hund-und-seine-neue-hundeh%C3%BCtte-36757551.jpg
     * https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnx2sHnnLU3zy1XnJB7BvGUR9spmAh5bxTUg&usqp=CAU
+    * https://www.westend61.de/en/imageView/CAVF56467/portrait-of-dog-lying-on-floor-at-home
 
 </details>
 '''
