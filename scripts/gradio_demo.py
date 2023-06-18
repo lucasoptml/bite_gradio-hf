@@ -665,8 +665,8 @@ demo = gr.Interface(
     examples=examples,
     thumbnail="bite_thumbnail.png",
     allow_flagging="never",
-    cache_examples=True,
+    cache_examples=False,  # True,
     examples_per_page=14,
 )
 
-demo.launch(share=True)
+demo.launch()   # share=True)
