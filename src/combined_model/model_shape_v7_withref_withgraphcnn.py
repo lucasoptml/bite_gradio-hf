@@ -304,7 +304,7 @@ class ModelRefinement(nn.Module):
             num_downsampling = 1
             smal_model_type = '39dogs_norm'
             smal = SMAL(smal_model_type=smal_model_type, template_name='neutral')     
-            ROOT_smal_downsampling = '/is/cluster/work/nrueegg/icon_pifu_related/barc_for_bite/src/graph_networks/graphcmr/data/' 
+            ROOT_smal_downsampling = './../../data/graphcmr_data/'
             smal_downsampling_npz_name = 'mesh_downsampling_' + os.path.basename(SMAL_MODEL_CONFIG[smal_model_type]['smal_model_path']).replace('.pkl', '_template.npz')
             smal_downsampling_npz_path = ROOT_smal_downsampling + smal_downsampling_npz_name  # 'data/mesh_downsampling.npz'
             self.my_custom_smal_dog_mesh = Mesh(filename=smal_downsampling_npz_path, num_downsampling=num_downsampling, nsize=1, body_model=smal) # , device=device)
