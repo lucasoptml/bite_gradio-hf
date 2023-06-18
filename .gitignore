@@ -1,6 +1,6 @@
 
 #custom 
-/checkpoint
+#/checkpoint
 debugging
 #/datasets
 src/smal_pytorch/smal_data/optional
