@@ -64,7 +64,7 @@ from combined_model.loss_utils.loss_laplacian_mesh_comparison import LaplacianCT
 from graph_networks import graphcmr     # .utils_mesh import Mesh
 from stacked_hourglass.utils.visualization import save_input_image_with_keypoints, save_input_image
 
-random.seed(1)
+random.seed(2)
 
 print(
     "torch: ", torch.__version__,
