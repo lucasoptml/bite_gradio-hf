@@ -31,6 +31,7 @@ import trimesh
 import cv2
 import shutil
 import random
+from datetime import datetime
 import gradio as gr
 
 import torchvision
@@ -576,8 +577,14 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
 
 # -------------------------------------------------------------------------------------------------------------------- #
 
+total_count = 0
 
 def run_complete_inference(img_path_or_img, crop_choice, use_ttopt):
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    global total_count
+    total_count += 1
+    print(dt_string + ' total count: ' + str(total_count))
     # depending on crop_choice: run faster r-cnn or take the input image directly
     if crop_choice == "input image is cropped":
         if isinstance(img_path_or_img, str):
@@ -613,9 +620,9 @@ description = '''
 
 #### Description
 This is a demo for BITE (*B*eyond Priors for *I*mproved *T*hree-{D} Dog Pose *E*stimation). 
+To run inference on one of the examples below, click on the desired image and push the submit button. Alternatively, you may upload one of your own images.
 You can either submit a cropped image or choose the option to run a pretrained Faster R-CNN in order to obtain a bounding box. 
-Furthermore, you have the possibility to skip test-time optimization, which will lead to faster calculation at the cost of less accurate results. 
-Please have a look at the examples below.
+While we recommend enabeling test-time optimization (computation can take up to a minute), you have the possibility to skip it, which will lead to faster calculation (a few seconds) at the cost of less accurate results. 
 <details>
 
 <summary>More</summary>
@@ -635,14 +642,11 @@ Please have a look at the examples below.
 #### Image Sources
 * Stanford extra image dataset
 * Images from google search engine
-    * https://www.dogtrainingnation.com/wp-content/uploads/2015/02/keep-dog-training-sessions-short.jpghttps://www.ktvb.com/article/news/local/dogs-can-now-be-off-leash-again-in-boises-ann-morrison-park-optimist-youth-sports-complex/277-609691113
-    * https://thumbs.dreamstime.com/b/hund-und-seine-neue-hundeh%C3%BCtte-36757551.jpg
     * https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnx2sHnnLU3zy1XnJB7BvGUR9spmAh5bxTUg&usqp=CAU
     * https://www.westend61.de/en/imageView/CAVF56467/portrait-of-dog-lying-on-floor-at-home
-    * https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFGxMcePtorQnSJncl6WhQfbR6VRccMq9gqA&usqp=CAU
 
 #### Disclosure
-The results shown in this demo are slightly improved compared to the ones depicted within our paper. Here, we apply a regularizer on the tail.
+The results shown in this demo are slightly improved compared to the ones depicted within our paper, as we apply a regularizer on the tail.
 
 </details>
 
