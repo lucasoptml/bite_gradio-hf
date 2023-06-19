@@ -511,7 +511,7 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
             total_loss.backward(retain_graph=True)  #  
             current_optimizer.step()
             current_scheduler.step(total_loss)
-            loop.set_description(f"Body Fitting = {total_loss.item():.3f}")
+            # loop.set_description(f"Body Fitting = {total_loss.item():.3f}")
 
             # save the result three times (0, 150, 300)
             if i == 300:  # if i % 150 == 0:    
