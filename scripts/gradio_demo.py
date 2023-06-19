@@ -663,4 +663,4 @@ demo = gr.Interface(
     examples_per_page=14,
 )
 
-demo.launch()   # share=True)
+demo.queue().launch(share=True)
