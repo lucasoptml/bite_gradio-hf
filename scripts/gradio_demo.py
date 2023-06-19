@@ -641,6 +641,10 @@ Please have a look at the examples below.
     * https://www.westend61.de/en/imageView/CAVF56467/portrait-of-dog-lying-on-floor-at-home
     * https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFGxMcePtorQnSJncl6WhQfbR6VRccMq9gqA&usqp=CAU
 </details>
+
+#### Disclosure
+The results shown here are slightly improved compared to the ones depicted within our paper. The only difference is a regularizer on the tail, at training time.
+
 '''
 
 
