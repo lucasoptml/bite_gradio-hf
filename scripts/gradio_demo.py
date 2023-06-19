@@ -640,10 +640,11 @@ Please have a look at the examples below.
     * https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnx2sHnnLU3zy1XnJB7BvGUR9spmAh5bxTUg&usqp=CAU
     * https://www.westend61.de/en/imageView/CAVF56467/portrait-of-dog-lying-on-floor-at-home
     * https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFGxMcePtorQnSJncl6WhQfbR6VRccMq9gqA&usqp=CAU
-</details>
 
 #### Disclosure
 The results shown in this demo are slightly improved compared to the ones depicted within our paper. Here, we apply a regularizer on the tail.
+
+</details>
 
 '''
 
