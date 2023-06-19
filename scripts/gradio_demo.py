@@ -566,8 +566,8 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
                             [0, 0, 1, 1],
                             [0, 0, 0, 1]])
     result_path = os.path.join(save_imgs_path, test_name_list[0] + '_z')
-    mesh.export(file_obj=result_path + '.obj')
-    result_gltf = result_path + '.obj'
+    mesh.export(file_obj=result_path + '.glb')
+    result_gltf = result_path + '.glb'
     return result_gltf
 
 
