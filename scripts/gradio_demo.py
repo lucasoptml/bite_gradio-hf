@@ -160,7 +160,7 @@ def run_bbox_inference(input_image):
 # -------------------------------------------------------------------------------------------------------------------- #
 args_config = "refinement_cfg_test_withvertexwisegc_csaddnonflat.yaml"
 # args_model_file_complete = "cvpr23_dm39dnnv3barcv2b_refwithgcpervertisflat0morestanding0/checkpoint.pth.tar"
-args_model_file_complete = "cvpr23_dm39dnnv3barcv2b_refwithgcpervertisflat0morestanding0_forrelease_v0b/checkpoint.pth.tar"
+args_model_file_complete = "cvpr23_dm39dnnv3barcv2b_refwithgcpervertisflat0morestanding0_forrelease_v0/checkpoint.pth.tar"
 args_suffix = "ttopt_v0"
 args_loss_weight_ttopt_path = "bite_loss_weights_ttopt.json"
 args_workers = 12
