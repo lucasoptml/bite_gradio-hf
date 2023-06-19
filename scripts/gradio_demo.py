@@ -244,7 +244,6 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
     with open(loss_weight_path, 'r') as j: 
         losses = json.loads(j.read())
     shutil.copyfile(loss_weight_path, root_out_path_details + os.path.basename(loss_weight_path))
-    print(losses)
 
     # prepare dataset and dataset loader
     val_dataset, val_loader, len_val_dataset, test_name_list, stanext_data_info, stanext_acc_joints = get_single_crop_dataset_from_image(input_image, bbox=bbox)
@@ -258,7 +257,7 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
     # prepare progress bar
     iterable = enumerate(val_loader) # the length of this iterator should be 1
     progress = None
-    if True:        # not quiet:
+    if False:        # not quiet:
         progress = tqdm(iterable, desc='Train', total=len(val_loader), ascii=True, leave=False)
         iterable = progress
     ind_img_tot = 0
@@ -289,28 +288,8 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
     ind_img = 0
     name = (test_name_list[target_dict['index'][ind_img].long()]).replace('/', '__').split('.')[0]
 
-    print('ind_img_tot: ' + str(ind_img_tot) + '   -> ' + name)
     ind_img_tot += 1
     batch_size = 1
-
-    # save initial visualizations
-    # save the image with keypoints as predicted by the stacked hourglass
-    pred_unp_prep = torch.cat((res['hg_keyp_256'][ind_img, :, :].detach(), res['hg_keyp_scores'][ind_img, :, :]), 1)
-    inp_img = input[ind_img, :, :, :].detach().clone()
-    out_path = root_out_path +  name + '_hg_key.png'
-    save_input_image_with_keypoints(inp_img, pred_unp_prep, out_path=out_path, threshold=0.01, print_scores=True, ratio_in_out=1.0)    # threshold=0.3
-    # save the input image
-    img_inp = input[ind_img, :, :, :].clone()
-    for t, m, s in zip(img_inp, stanext_data_info.rgb_mean, stanext_data_info.rgb_stddev): t.add_(m)       # inverse to transforms.color_normalize()
-    img_inp = img_inp.detach().cpu().numpy().transpose(1, 2, 0)  
-    img_init = Image.fromarray(np.uint8(255*img_inp)).convert('RGB') 
-    img_init.save(root_out_path_details + name + '_img_ainit.png')
-    # save ground truth silhouette (for visualization only, it is not used during the optimization)
-    target_img_silh = Image.fromarray(np.uint8(255*target_dict['silh'][ind_img, :, :].detach().cpu().numpy())).convert('RGB')
-    target_img_silh.save(root_out_path_details +  name + '_target_silh.png')
-    # save the silhouette as predicted by the stacked hourglass
-    hg_img_silh = Image.fromarray(np.uint8(255*res['hg_silh_prep'][ind_img, :, :].detach().cpu().numpy())).convert('RGB')
-    hg_img_silh.save(root_out_path +  name + '_hg_silh.png')
 
     # initialize the variables over which we want to optimize
     optimed_pose_6d = all_pose_6d[ind_img, None, :, :].to(device).clone().detach().requires_grad_(True)
@@ -386,7 +365,6 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
         target_hg_silh = res['hg_silh_prep'][ind_img, :, :].detach()
         target_kp_resh = res['hg_keyp_256'][ind_img, None, :, :].reshape((-1, 2)).detach()
         # find out if ground contact constraints should be used for the image at hand
-        # print('is flat: ' + str(res['isflat_prep'][ind_img]))
         if res['isflat_prep'][ind_img] >= 0.5: # threshold should probably be set higher
             isflat = [True]
         else:
