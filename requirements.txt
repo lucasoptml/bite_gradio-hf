@@ -1,7 +1,5 @@
-torch==1.6.0
-torchvision==0.7.0
-pytorch3d==0.2.5
-kornia==0.4.0 
+https://huggingface.co/camenduru/pytorch3d-build/resolve/main/pytorch3d-0.7.4-cp310-cp310-linux_x86_64.whl
+kornia
 matplotlib
 opencv-python
 trimesh
@@ -13,3 +11,4 @@ pycocotools
 openpyxl
 dominate
 git+https://github.com/runa91/FrEIA.git
+gradio
