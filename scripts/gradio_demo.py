@@ -643,7 +643,7 @@ Please have a look at the examples below.
 </details>
 
 #### Disclosure
-The results shown here are slightly improved compared to the ones depicted within our paper. The only difference is a regularizer on the tail, at training time.
+The results shown in this demo are slightly improved compared to the ones depicted within our paper. Here, we apply a regularizer on the tail.
 
 '''
 
