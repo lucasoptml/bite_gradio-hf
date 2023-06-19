@@ -392,7 +392,7 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
         ##########################################################################################################
         # start optimizing for this image
         n_iter = 301    # how many iterations are desired? (+1)
-        loop = tqdm(range(n_iter))
+        loop = range(n_iter)
         per_loop_lst = []
         list_error_procrustes = []
         for i in loop:
