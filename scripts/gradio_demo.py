@@ -523,12 +523,8 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
                 pred_tex = visualizations[0, :, :, :].permute((1, 2, 0)).cpu().detach().numpy() / 256
                 # out_path = root_out_path_details +  name + '_tex_pred_e' + format(i, '03d') + '.png'
                 # plt.imsave(out_path, pred_tex)
-                input_image_np = img_inp.copy()
-                im_masked = cv2.addWeighted(input_image_np,0.2,pred_tex,0.8,0)
                 pred_tex_max = np.max(pred_tex, axis=2)
-                im_masked[pred_tex_max<0.01, :] = input_image_np[pred_tex_max<0.01, :]
                 out_path = root_out_path +  name + '_comp_pred_e' + format(i, '03d') + '.png'
-                # plt.imsave(out_path, im_masked)
                 # save mesh
                 my_mesh_tri = trimesh.Trimesh(vertices=smal_verts[0, ...].detach().cpu().numpy(), faces=faces_prep[0, ...].detach().cpu().numpy(), process=False,  maintain_order=True)
                 my_mesh_tri.visual.vertex_colors = vert_colors
