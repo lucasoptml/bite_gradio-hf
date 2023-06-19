@@ -152,7 +152,7 @@ def run_bbox_inference(input_image):
     out_path = os.path.join(cfg.paths.ROOT_OUT_PATH, 'gradio_examples', 'test2.png')
     img, bbox = detect_object(model=model_bbox, img_path_or_img=input_image, confidence=0.5)
     fig = plt.figure()   #  plt.figure(figsize=(20,30))
-    plt.imsave(out_path, img)
+    # plt.imsave(out_path, img)
     return img, bbox
 
 
@@ -406,7 +406,7 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
         # save mesh
         my_mesh_tri = trimesh.Trimesh(vertices=smal_verts[0, ...].detach().cpu().numpy(), faces=faces_prep[0, ...].detach().cpu().numpy(), process=False,  maintain_order=True)
         my_mesh_tri.visual.vertex_colors = vert_colors
-        my_mesh_tri.export(root_out_path +  name + '_res_e000' + '.obj')
+        # my_mesh_tri.export(root_out_path +  name + '_res_e000' + '.obj')
 
     else: 
 
@@ -465,11 +465,13 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
             pred_keyp = pred_keyp_raw[:, :24, :]
 
             # save silhouette reprojection visualization
+            """
             if i==0:
                 img_silh = Image.fromarray(np.uint8(255*pred_silh_images[0, 0, :, :].detach().cpu().numpy())).convert('RGB')
                 img_silh.save(root_out_path_details +  name + '_silh_ainit.png')
                 my_mesh_tri = trimesh.Trimesh(vertices=smal_verts[0, ...].detach().cpu().numpy(), faces=faces_prep[0, ...].detach().cpu().numpy(), process=False,  maintain_order=True)
                 my_mesh_tri.export(root_out_path_details +  name + '_res_ainit.obj')
+            """
 
             # silhouette loss
             diff_silh = torch.abs(pred_silh_images[0, 0, :, :] - target_hg_silh)
@@ -533,7 +535,7 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
             loop.set_description(f"Body Fitting = {total_loss.item():.3f}")
 
             # save the result three times (0, 150, 300)
-            if i % 150 == 0:    
+            if i == 300:  # if i % 150 == 0:    
                 # save silhouette image
                 img_silh = Image.fromarray(np.uint8(255*pred_silh_images[0, 0, :, :].detach().cpu().numpy())).convert('RGB')
                 img_silh.save(root_out_path_details +  name + '_silh_e' + format(i, '03d') + '.png')
@@ -547,14 +549,14 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
                 pred_tex_max = np.max(pred_tex, axis=2)
                 im_masked[pred_tex_max<0.01, :] = input_image_np[pred_tex_max<0.01, :]
                 out_path = root_out_path +  name + '_comp_pred_e' + format(i, '03d') + '.png'
-                plt.imsave(out_path, im_masked)
+                # plt.imsave(out_path, im_masked)
                 # save mesh
                 my_mesh_tri = trimesh.Trimesh(vertices=smal_verts[0, ...].detach().cpu().numpy(), faces=faces_prep[0, ...].detach().cpu().numpy(), process=False,  maintain_order=True)
                 my_mesh_tri.visual.vertex_colors = vert_colors
-                my_mesh_tri.export(root_out_path +  name + '_res_e' + format(i, '03d') + '.obj')
+                # my_mesh_tri.export(root_out_path +  name + '_res_e' + format(i, '03d') + '.obj')
                 # save focal length (together with the mesh this is enough to create an overlay in blender)
-                out_file_flength = root_out_path_details +  name + '_flength_e' + format(i, '03d') # + '.npz'
-                np.save(out_file_flength, optimed_camera_flength.detach().cpu().numpy())
+                # out_file_flength = root_out_path_details +  name + '_flength_e' + format(i, '03d') # + '.npz'
+                # np.save(out_file_flength, optimed_camera_flength.detach().cpu().numpy())
             current_i += 1
 
     # prepare output mesh
@@ -564,8 +566,8 @@ def run_bite_inference(input_image, bbox=None, apply_ttopt=True):
                             [0, 0, 1, 1],
                             [0, 0, 0, 1]])
     result_path = os.path.join(save_imgs_path, test_name_list[0] + '_z')
-    mesh.export(file_obj=result_path + '.glb')
-    result_gltf = result_path + '.glb'
+    mesh.export(file_obj=result_path + '.obj')
+    result_gltf = result_path + '.obj'
     return result_gltf
 
 
