@@ -6,7 +6,7 @@ matplotlib
 opencv-python
 trimesh
 scipy
-chumpy
+# chumpy
 pymp
 importlib-resources
 pycocotools
