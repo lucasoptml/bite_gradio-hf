@@ -12,5 +12,6 @@ importlib-resources
 pycocotools
 openpyxl
 dominate
-git+https://github.com/runa91/FrEIA.git
+# git+https://github.com/runa91/FrEIA.git
+git+https://github.com/vislearn/FrEIA.git
 gradio
